@@ -20,7 +20,7 @@ button{cursor:pointer;border:0;border-radius:10px;padding:12px 18px;background:#
 .card img{width:100%;height:210px;object-fit:cover}
 .info{padding:17px;display:flex;flex-direction:column;flex:1}
 .desc{color:#647168;font-size:13px;line-height:1.5;margin:8px 0;cursor:pointer}
-.desc:after{content:" 🔒 (klik untuk detail)"}
+.desc:after{content:" (klik untuk detail)"}
 .price{font-size:19px;color:#365d47;font-weight:bold;margin:12px 0}
 .info button{margin-top:auto;width:100%}
 .cart{background:white;border-radius:16px;padding:22px;margin-top:35px}
@@ -56,7 +56,10 @@ input{padding:13px;border:1px solid #ddd;border-radius:10px;width:100%}
 
 <header>
  <div class="logo">🐾 PetShop <span>ABY.</span></div>
- <button onclick="requireLogin(()=>document.getElementById('keranjang').scrollIntoView())">🛒 Keranjang (<span id="count">0</span>)</button>
+ <div style="display:flex;gap:8px;flex-wrap:wrap">
+  <button onclick="openSeller()">🏪 Mulai Jualan</button>
+  <button onclick="requireLogin(()=>document.getElementById('keranjang').scrollIntoView())">🛒 Keranjang (<span id="count">0</span>)</button>
+</div>
 </header>
 
 <section class="hero">
@@ -103,7 +106,7 @@ input{padding:13px;border:1px solid #ddd;border-radius:10px;width:100%}
 <div class="authmodal" id="authModal">
   <div class="authbox">
     <h2>🔐 Login PetShop Rafif</h2>
-    <p>Login atau daftar terlebih dahulu untuk membuka deskripsi, keranjang, dan fitur chat.</p>
+    <p>Deskripsi bisa dilihat tanpa login. Login atau daftar untuk keranjang, checkout, chat, dan fitur penjual.</p>
     <input id="authUser" type="email" placeholder="Email" autocomplete="email">
     <input id="authPass" type="password" placeholder="Password (min. 6 karakter)" autocomplete="current-password">
     <div class="actions">
@@ -147,7 +150,15 @@ async function registerUser() {
   const msg = document.getElementById('authMsg');
   if (!email || !password) { msg.textContent = 'Isi email dan password.'; return; }
   if (password.length < 6) { msg.textContent = 'Password minimal 6 karakter.'; return; }
-  const { data, error } = await supabaseClient.auth.signUp({ email, password });
+  
+  const { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: window.location.origin
+    }
+  });
+
   if (error) { msg.textContent = error.message; return; }
   msg.style.color = 'green';
   msg.textContent = data.user && !data.session ? 'Akun dibuat. Cek email untuk verifikasi.' : 'Akun berhasil dibuat!';
@@ -167,10 +178,8 @@ async function loginUser() {
 }
 
 function showDescription(name) {
-  requireLogin(() => {
-    let a = animals.find(x => x.name === name);
-    if (a) alert(a.name + '\n\n' + a.desc);
-  });
+  const a = animals.find(x => x.name === name);
+  if (a) alert(a.name + '\n\n' + a.desc);
 }
 
 const animals = [
@@ -252,6 +261,46 @@ async function checkout(){
 
  let nomor = "6281234567890"; // Ganti nomor WhatsApp jika perlu
  window.open("https://wa.me/" + nomor + "?text=" + encodeURIComponent(msg), "_blank");
+}
+
+
+// Area penjual: membutuhkan login dan tabel seller_products di Supabase.
+function openSeller() {
+  document.getElementById('sellerPanel').style.display = 'block';
+  document.getElementById('sellerPanel').scrollIntoView({behavior:'smooth'});
+  requireLogin();
+}
+
+async function addSellerProduct() {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user) return requireLogin(addSellerProduct);
+
+  const store = document.getElementById('sellerName').value.trim();
+  const name = document.getElementById('sellerProduct').value.trim();
+  const price = Number(document.getElementById('sellerPrice').value);
+  const desc = document.getElementById('sellerDesc').value.trim();
+  const msg = document.getElementById('sellerMsg');
+
+  if (!store || !name || !price || price < 1 || !desc) {
+    msg.textContent = 'Lengkapi nama toko, produk, harga, dan deskripsi.';
+    return;
+  }
+
+  const { error } = await supabaseClient.from('seller_products').insert({
+    user_id: user.id, store_name: store, name, price, description: desc
+  });
+
+  if (error) {
+    msg.textContent = 'Gagal menyimpan produk: ' + error.message +
+      '. Pastikan tabel seller_products dan RLS sudah dibuat di Supabase.';
+    return;
+  }
+
+  msg.style.color = 'green';
+  msg.textContent = 'Produk berhasil ditambahkan!';
+  document.getElementById('sellerProduct').value = '';
+  document.getElementById('sellerPrice').value = '';
+  document.getElementById('sellerDesc').value = '';
 }
 
 // Fitur Chatbot Interaktif
