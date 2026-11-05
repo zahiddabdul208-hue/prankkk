@@ -26,9 +26,13 @@ button{cursor:pointer;border:0;border-radius:10px;padding:12px 18px;background:#
 .cart{background:white;border-radius:16px;padding:22px;margin-top:35px}
 .item{padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;gap:10px}
 footer{background:#263c31;color:white;text-align:center;padding:30px}
-input{padding:13px;border:1px solid #ddd;border-radius:10px;width:100%}
+input, textarea{padding:13px;border:1px solid #ddd;border-radius:10px;width:100%}
 
-/* Chatbot & Auth Modal Styles */
+/* Panel Penjual */
+.seller-panel{background:white;border-radius:16px;padding:22px;margin-top:35px}
+.seller-panel input, .seller-panel textarea{margin:8px 0 15px 0}
+
+/* Chatbot Styles */
 #chatToggle{position:fixed;right:16px;bottom:16px;z-index:10;border-radius:30px;box-shadow:0 5px 20px #0003}
 #chatBox{display:none;position:fixed;right:16px;bottom:78px;width:min(360px,calc(100vw - 32px));height:420px;background:white;border-radius:18px;box-shadow:0 10px 35px #0003;z-index:11;overflow:hidden}
 .chathead{background:#365d47;color:white;padding:13px;display:flex;justify-content:space-between;font-weight:bold}
@@ -37,12 +41,6 @@ input{padding:13px;border:1px solid #ddd;border-radius:10px;width:100%}
 .bot{background:#e4eee2}.user{background:#dbeaf6;margin-left:auto}
 .chatfoot{display:flex;gap:6px;padding:9px}
 .chatfoot input{flex:1;min-width:0}
-
-.authmodal{display:none;position:fixed;inset:0;background:#0008;z-index:99;align-items:center;justify-content:center;padding:16px}
-.authbox{background:white;width:min(400px,100%);border-radius:18px;padding:24px;box-shadow:0 10px 40px #0004}
-.authbox input{display:block;width:100%;margin:10px 0}
-.authbox .actions{display:flex;gap:8px;margin-top:12px}
-.authbox .actions button{flex:1}
 
 @media(max-width:650px){
 .hero{grid-template-columns:1fr;padding:25px}
@@ -57,8 +55,8 @@ input{padding:13px;border:1px solid #ddd;border-radius:10px;width:100%}
 <header>
  <div class="logo">🐾 PetShop <span>ABY.</span></div>
  <div style="display:flex;gap:8px;flex-wrap:wrap">
-  <button onclick="openSeller()">🏪 Mulai Jualan</button>
-  <button onclick="requireLogin(()=>document.getElementById('keranjang').scrollIntoView())">🛒 Keranjang (<span id="count">0</span>)</button>
+  <button onclick="document.getElementById('sellerPanel').scrollIntoView({behavior:'smooth'})">🏪 Ajukan Produk</button>
+  <button onclick="document.getElementById('keranjang').scrollIntoView({behavior:'smooth'})">🛒 Keranjang (<span id="count">0</span>)</button>
 </div>
 </header>
 
@@ -67,7 +65,7 @@ input{padding:13px;border:1px solid #ddd;border-radius:10px;width:100%}
   <p>WELCOME TO PETSHOP RAFIF</p>
   <h1>Temukan Sahabat Terbaikmu!</h1>
   <p>Berbagai hewan lucu untuk menjadi teman terbaikmu.</p>
-  <button onclick="document.getElementById('produk').scrollIntoView()">Lihat Hewan →</button>
+  <button onclick="document.getElementById('produk').scrollIntoView({behavior:'smooth'})">Lihat Hewan →</button>
  </div>
  <img src="rafif.jpg" alt="Kucing" onerror="this.src='https://placehold.co/500x300?text=Foto+Utama'">
 </section>
@@ -78,11 +76,32 @@ input{padding:13px;border:1px solid #ddd;border-radius:10px;width:100%}
  <br><br>
  <div class="grid" id="products"></div>
 
+ <!-- Panel Pengajuan Produk (Konfirmasi via Email) -->
+ <div class="seller-panel" id="sellerPanel">
+  <h2>🏪 Ajukan Produk Baru</h2>
+  <p>Siapa saja bisa mengajukan produk! Pengajuan akan dikirimkan ke Admin via email untuk dikonfirmasi sebelum ditampilkan di katalog.</p>
+  
+  <label>Nama Penjual / Toko:</label>
+  <input id="sellerName" placeholder="Contoh: Toko Rafif Jaya">
+
+  <label>Nama Hewan / Produk:</label>
+  <input id="sellerProduct" placeholder="Contoh: Kucing Anggora">
+
+  <label>Harga (Rp):</label>
+  <input id="sellerPrice" type="number" placeholder="Contoh: 500000">
+
+  <label>Deskripsi:</label>
+  <textarea id="sellerDesc" placeholder="Deskripsi hewan peliharaan..."></textarea>
+
+  <button onclick="submitProductForApproval()">📧 Kirim Pengajuan Produk ke Email Admin</button>
+  <p id="sellerMsg" style="margin-top:10px;font-size:13px"></p>
+ </div>
+
  <div class="cart" id="keranjang">
   <h2>🛒 Keranjang</h2>
   <div id="items">Keranjang kosong.</div>
   <h3 id="total">Total: Rp0</h3>
-  <button onclick="requireLogin(checkout)">Pesan via WhatsApp</button>
+  <button onclick="checkout()">Pesan via WhatsApp</button>
  </div>
 </section>
 
@@ -92,7 +111,7 @@ input{padding:13px;border:1px solid #ddd;border-radius:10px;width:100%}
 </footer>
 
 <!-- Chatbot Floating Button -->
-<button id="chatToggle" onclick="requireLogin(toggleChat)">💬 Chatbot PetShop</button>
+<button id="chatToggle" onclick="toggleChat()">💬 Chatbot PetShop</button>
 <div id="chatBox">
   <div class="chathead">🤖 Chatbot PetShop <button onclick="toggleChat()" style="padding:3px 8px;background:#263c31">✕</button></div>
   <div id="messages"><div class="msg bot">Halo! Ada yang bisa kubantu seputar hewan peliharaan? 🐾</div></div>
@@ -102,92 +121,13 @@ input{padding:13px;border:1px solid #ddd;border-radius:10px;width:100%}
   </div>
 </div>
 
-<!-- Auth Modal Login / Register -->
-<div class="authmodal" id="authModal">
-  <div class="authbox">
-    <h2>🔐 Login PetShop Rafif</h2>
-    <p>Deskripsi bisa dilihat tanpa login. Login atau daftar untuk keranjang, checkout, chat, dan fitur penjual.</p>
-    <input id="authUser" type="email" placeholder="Email" autocomplete="email">
-    <input id="authPass" type="password" placeholder="Password (min. 6 karakter)" autocomplete="current-password">
-    <div class="actions">
-      <button onclick="registerUser()">Daftar</button>
-      <button onclick="loginUser()">Login</button>
-    </div>
-    <button style="background:#777;width:100%;margin-top:8px" onclick="closeAuth()">Batal</button>
-    <p id="authMsg" style="color:#b33;font-size:13px"></p>
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// 1. Masukkan URL dan ANON Key dari Supabase kamu di sini
-const SUPABASE_URL = 'https://bdxqxfxosthbhhexbwzd.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_ZwEAf8yX3fEanm0WuOa3BA_T1gNkcXa';
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-let loggedIn = false;
-(async () => {
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  loggedIn = !!session;
-})();
-
-function requireLogin(callback) {
-  if (!loggedIn) {
-    window.pendingAction = callback;
-    document.getElementById('authModal').style.display = 'flex';
-    return;
-  }
-  if (callback) callback();
-}
-
-function closeAuth() {
-  document.getElementById('authModal').style.display = 'none';
-}
-
-async function registerUser() {
-  const email = document.getElementById('authUser').value.trim();
-  const password = document.getElementById('authPass').value;
-  const msg = document.getElementById('authMsg');
-  if (!email || !password) { msg.textContent = 'Isi email dan password.'; return; }
-  if (password.length < 6) { msg.textContent = 'Password minimal 6 karakter.'; return; }
-  
-  const { data, error } = await supabaseClient.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: window.location.origin
-    }
-  });
-
-  if (error) { msg.textContent = error.message; return; }
-  msg.style.color = 'green';
-  msg.textContent = data.user && !data.session ? 'Akun dibuat. Cek email untuk verifikasi.' : 'Akun berhasil dibuat!';
-}
-
-async function loginUser() {
-  const email = document.getElementById('authUser').value.trim();
-  const password = document.getElementById('authPass').value;
-  const msg = document.getElementById('authMsg');
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if (error) { msg.textContent = error.message; return; }
-  loggedIn = !!data.session;
-  closeAuth();
-  const cb = window.pendingAction;
-  window.pendingAction = null;
-  if (cb) cb();
-}
-
-function showDescription(name) {
-  const a = animals.find(x => x.name === name);
-  if (a) alert(a.name + '\n\n' + a.desc);
-}
-
-const animals = [
+let animals = [
  {name:"Kucing Persia", cat:"Kucing", price:1500000, desc:"Kucing anggun dengan bulu lebat dan sifat yang tenang serta ramah.", img:"rafif.jpg"},
- {name:"musang", cat:"musang", price:50000, desc:"Kucing aktif, cerdas, dan sangat suka bermain dengan pemiliknya.", img:"musang.jpg"},
+ {name:"Musang", cat:"Musang", price:50000, desc:"Musang aktif, cerdas, dan sangat suka bermain dengan pemiliknya.", img:"musang.jpg"},
  {name:"Anjing", cat:"Anjing", price:25000, desc:"Sahabat setia yang membutuhkan aktivitas dan perhatian setiap hari.", img:"anjing.jpg"},
  {name:"Kelinci Mini", cat:"Kelinci", price:250000, desc:"Kelinci mungil menggemaskan yang suka makan sayuran segar.", img:"kelinci.jpg"},
- {name:"Hamster imup", cat:"Hamster", price:1000, desc:"Hewan kecil lincah yang mudah dipelihara di dalam sangkar khusus.", img:"Ok.jpg"},
+ {name:"Hamster imut", cat:"Hamster", price:1000, desc:"Hewan kecil lincah yang mudah dipelihara di dalam sangkar khusus.", img:"Ok.jpg"},
  {name:"Burung", cat:"Burung", price:350000, desc:"Burung cantik bersuara merdu untuk menemani hari-harimu.", img:"oii.jpg"}
 ];
 
@@ -214,13 +154,11 @@ function render(){
 }
 
 function add(name){
- requireLogin(() => {
-   let a = animals.find(x => x.name === name);
-   let item = cart.find(x => x.name === name);
-   if(item) item.qty++;
-   else cart.push({...a, qty:1});
-   update();
- });
+ let a = animals.find(x => x.name === name);
+ let item = cart.find(x => x.name === name);
+ if(item) item.qty++;
+ else cart.push({...a, qty:1});
+ update();
 }
 
 function update(){
@@ -238,43 +176,13 @@ function removeItem(i){
  update();
 }
 
-async function checkout(){
- if(!loggedIn) return requireLogin(checkout);
- if(!cart.length) return alert("Keranjang kosong!");
- 
- const { data: { user } } = await supabaseClient.auth.getUser();
- if(!user) return alert("Silakan login ulang.");
- 
- const total = cart.reduce((s,a) => s + a.price*a.qty, 0);
- const items = cart.map(a => ({name: a.name, qty: a.qty, price: a.price}));
- 
- // Menyimpan ke database Supabase (tabel orders)
- const { error } = await supabaseClient.from('orders').insert({user_id: user.id, items, total});
- if(error){
-   alert("Gagal menyimpan pesanan ke database: " + error.message);
-   return;
- }
-
- let msg = "Halo PetShop Rafif, saya ingin memesan:\n";
- cart.forEach(a => msg += a.name + " x" + a.qty + "\n");
- msg += "Total: " + rupiah(total);
-
- let nomor = "6281234567890"; // Ganti nomor WhatsApp jika perlu
- window.open("https://wa.me/" + nomor + "?text=" + encodeURIComponent(msg), "_blank");
+function showDescription(name) {
+  const a = animals.find(x => x.name === name);
+  if (a) alert(a.name + '\n\n' + a.desc);
 }
 
-
-// Area penjual: membutuhkan login dan tabel seller_products di Supabase.
-function openSeller() {
-  document.getElementById('sellerPanel').style.display = 'block';
-  document.getElementById('sellerPanel').scrollIntoView({behavior:'smooth'});
-  requireLogin();
-}
-
-async function addSellerProduct() {
-  const { data: { user } } = await supabaseClient.auth.getUser();
-  if (!user) return requireLogin(addSellerProduct);
-
+// Fungsi Mengirim Pengajuan Produk via Email Ke Admin
+function submitProductForApproval() {
   const store = document.getElementById('sellerName').value.trim();
   const name = document.getElementById('sellerProduct').value.trim();
   const price = Number(document.getElementById('sellerPrice').value);
@@ -282,25 +190,43 @@ async function addSellerProduct() {
   const msg = document.getElementById('sellerMsg');
 
   if (!store || !name || !price || price < 1 || !desc) {
+    msg.style.color = '#b33';
     msg.textContent = 'Lengkapi nama toko, produk, harga, dan deskripsi.';
     return;
   }
 
-  const { error } = await supabaseClient.from('seller_products').insert({
-    user_id: user.id, store_name: store, name, price, description: desc
-  });
+  // GANTI EMAIL DI BAWAH INI DENGAN EMAIL KAMU:
+  const adminEmail = "emailkamu@gmail.com"; 
 
-  if (error) {
-    msg.textContent = 'Gagal menyimpan produk: ' + error.message +
-      '. Pastikan tabel seller_products dan RLS sudah dibuat di Supabase.';
-    return;
-  }
+  const subject = encodeURIComponent("Pengajuan Produk Baru: " + name);
+  const bodyText = encodeURIComponent(
+    "Halo Admin PetShop Rafif,\n\n" +
+    "Ada pengajuan produk baru yang membutuhkan konfirmasi:\n\n" +
+    "Nama Toko/Penjual: " + store + "\n" +
+    "Nama Produk/Hewan: " + name + "\n" +
+    "Harga: " + rupiah(price) + "\n" +
+    "Deskripsi:\n" + desc + "\n\n" +
+    "Jika disetujui, tambahkan data ini ke daftar katalog web!"
+  );
 
   msg.style.color = 'green';
-  msg.textContent = 'Produk berhasil ditambahkan!';
-  document.getElementById('sellerProduct').value = '';
-  document.getElementById('sellerPrice').value = '';
-  document.getElementById('sellerDesc').value = '';
+  msg.textContent = 'Membuka aplikasi email... Silakan kirim email untuk mengonfirmasi pengajuan produk!';
+
+  // Membuka aplikasi email pengirim dengan draf berisi detail produk
+  window.location.href = `mailto:${adminEmail}?subject=${subject}&body=${bodyText}`;
+}
+
+function checkout(){
+ if(!cart.length) return alert("Keranjang kosong!");
+ 
+ const total = cart.reduce((s,a) => s + a.price*a.qty, 0);
+
+ let msg = "Halo PetShop Rafif, saya ingin memesan:\n";
+ cart.forEach(a => msg += a.name + " x" + a.qty + "\n");
+ msg += "Total: " + rupiah(total);
+
+ let nomor = "6281234567890"; // Ganti nomor WhatsApp jika perlu
+ window.open("https://wa.me/" + nomor + "?text=" + encodeURIComponent(msg), "_blank");
 }
 
 // Fitur Chatbot Interaktif
@@ -327,7 +253,7 @@ function sendChat(){
   
   let t = q.toLowerCase();
   let reply = "Aku belum paham. Coba tanya tentang harga, jenis hewan, atau cara pesan ya!";
-  if(t.includes("harga") || t.includes("berapa")) reply = "Harga hewan berkisar dari Rp100.000 hingga Rp2.500.000 sesuai katalog.";
+  if(t.includes("harga") || t.includes("berapa")) reply = "Harga hewan berkisar sesuai katalog yang tertera.";
   else if(t.includes("pesan") || t.includes("beli")) reply = "Tambahkan hewan ke keranjang lalu klik Pesan via WhatsApp!";
   else if(t.includes("halo") || t.includes("hai")) reply = "Halo juga! Ada yang bisa dibantu di PetShop Rafif?";
   
